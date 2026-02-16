@@ -1,5 +1,5 @@
 #importaciones
-from fastapi import FastAPI
+from fastapi import FastAPI, status,HTTPException
 import asyncio
 from typing import Optional
 
@@ -33,4 +33,35 @@ async def listar_usuarios(edad: Optional[int] = None, ciudad: Optional[str] = No
     return {
         "edad": edad,
         "ciudad": ciudad
+    }
+
+#tabla ficticia
+usuarios=[
+    {"id":1,"nombre":"Fanny","edad":21},
+    {"id":2,"nombre":"Aly","edad":21},
+    {"id":3,"nombre":"Dulce","edad":21},
+
+]
+
+@app.get("/v1/usuarios/",tags=['HTTP CRUD'])
+async def leer_usuarios():
+    return{
+        "total":len(usuarios),
+        "ususrios": usuarios,
+        "status":"200"
+    }
+
+@app.get("/v1/usuarios/",tags=['HTTP CRUD'])
+async def agregar_usuarios(usuario:dict):
+    for usr in usuarios:
+        if usr["id"] == usuario.get("id")
+            raise HTTPException(
+                status_code=400,
+                detail="El id ya exixte"
+            )
+
+    usuarios.append(usuario)
+    return{
+        "mensaje":"Usuario Creado",
+        "Datos nuevos": usuario
     }
