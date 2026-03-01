@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field, EmailStr
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
 
@@ -16,7 +16,11 @@ prestamos = []
 #Creamos el modelo validación pydantic
 class Usuario(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
-    correo: EmailStr
+    correo: str = Field(
+        ...,
+        pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$",
+        description="Correo electrónico válido"
+    )
 
 class Libro(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
