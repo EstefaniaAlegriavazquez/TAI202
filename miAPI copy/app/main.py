@@ -1,9 +1,8 @@
 #importaciones
-from fastapi import FastAPI, status,HTTPException, Depends
+from fastapi import FastAPI, status,HTTPException
 import asyncio
 from typing import Optional
 from pydantic import BaseModel,Field
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 #Instancia del servidor
 app= FastAPI(
@@ -55,10 +54,6 @@ class crear_usuario(BaseModel):
     id:int = Field(...,gt=0, description="Identificador de usurio")
     nombre:str= Field(..., min_length=3,max_length=50,example="Estefania")
     edad:int= Field(..., ge=1,le=123,description="Edad valida entre 1 y 123")
-
-# Seguridad HTTP BASIC#
-
-security= HTTPBasic()
 
 
 # Parámetro obligatorio
