@@ -3,7 +3,11 @@ from fastapi import FastAPI, status,HTTPException, Depends
 import asyncio
 from typing import Optional
 from pydantic import BaseModel,Field
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+
+
 
 #Instancia del servidor
 app= FastAPI(
@@ -48,7 +52,52 @@ usuarios = [
     {"id": 3, "nombre": "Dulce", "edad": 21},
 ]
 
+# Configuración JWT
+SECRET_KEY = "mi_clave_secreta"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+#Configuraciones OAuth2
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def crear_token(data: dict):
+    datos = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    datos.update({"exp": expire})
+    token = jwt.encode(datos, SECRET_KEY, algorithm=ALGORITHM)
+    return token
+
+#Enpoint para agregar Token
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+
+    if form_data.username != "Estefania" or form_data.password != "1234":
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciales incorrectas"
+        )
+
+    access_token = crear_token({"sub": form_data.username})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
+#Función para validar Token
+async def validar_token(token: str = Depends(oauth2_scheme)):
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        usuario = payload.get("sub")
+
+        if usuario is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+
+        return usuario
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
 #Creamos el modelo validación pydantic
 class crear_usuario(BaseModel):
@@ -116,7 +165,7 @@ async def crear_usuario(usuario: crear_usuario):
 
 # PUT Actualizar usuario completo
 @app.put("/v1/usuarios/{id}", tags=["HTTP CRUD"])
-async def actualizar_usuario(id: int, usuario_actualizado: dict):
+async def actualizar_usuario(id: int, usuario_actualizado: dict, usuario: str = Depends(validar_token)):
 
     for index, usr in enumerate(usuarios):
         if usr["id"] == id:
@@ -150,7 +199,7 @@ async def actualizar_parcial_usuario(id: int, datos_actualizar: dict):
 
 #DELETE Eliminar usuario
 @app.delete("/v1/usuarios/{id}", tags=["HTTP CRUD"])
-async def eliminar_usuario(id: int):
+async def eliminar_usuario(id: int, usuario: str = Depends(validar_token)):
 
     for usr in usuarios:
         if usr["id"] == id:
