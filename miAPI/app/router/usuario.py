@@ -25,6 +25,16 @@ async def leer_usuarios(db:Session= Depends(get_db)):
         "status": "200"
     }
 
+# GET POR ID
+@router.get("/{id}")
+async def leer_usuario(id: int, db: Session = Depends(get_db)):
+    usuario = db.query(dbUsuario).filter(dbUsuario.id == id).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    return usuario
+
 @router.post("/")
 async def crear_usuario(usuarioP: crear_usuario, db:Session= Depends(get_db)):
     
@@ -39,51 +49,63 @@ async def crear_usuario(usuarioP: crear_usuario, db:Session= Depends(get_db)):
     }
 
 # PUT Actualizar usuario completo
-@router.put("/")
-async def actualizar_usuario(id: int, usuario_actualizado: dict):
+@router.put("/{id}")
+async def actualizar_usuario(
+    id: int,
+    usuario_actualizado: dict,
+    db: Session = Depends(get_db)
+):
+    usuario = db.query(dbUsuario).filter(dbUsuario.id == id).first()
 
-    for index, usr in enumerate(usuarios):
-        if usr["id"] == id:
-            usuarios[index] = usuario_actualizado
-            return {
-                "mensaje": "Usuario actualizado correctamente",
-                "usuario": usuario_actualizado
-            }
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
-    )
+    usuario.nombre = usuario_actualizado.get("nombre")
+    usuario.edad = usuario_actualizado.get("edad")
+
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "mensaje": "Usuario actualizado correctamente",
+        "usuario": usuario
+    }
 
 #PATCH Actualización parcial
 @router.patch("/{id}")
-async def actualizar_parcial_usuario(id: int, datos_actualizar: dict):
+async def actualizar_parcial_usuario(id: int, datos: dict, db: Session = Depends(get_db)):
+    usuario = db.query(dbUsuario).filter(dbUsuario.id == id).first()
 
-    for usr in usuarios:
-        if usr["id"] == id:
-            usr.update(datos_actualizar)
-            return {
-                "mensaje": "Usuario actualizado parcialmente",
-                "usuario": usr
-            }
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
-    )
+    if "nombre" in datos:
+        usuario.nombre = datos["nombre"]
+    if "edad" in datos:
+        usuario.edad = datos["edad"]
 
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "mensaje": "Usuario actualizado parcialmente",
+        "usuario": usuario
+    }
 #DELETE Eliminar usuario
-@router.delete("/")
-async def eliminar_usuario(id: int,usuarioAuth:str= Depends(verificar_peticion)):
+@router.delete("/{id}")
+async def eliminar_usuario(
+    id: int,
+    db: Session = Depends(get_db),
+    usuarioAuth: str = Depends(verificar_peticion)
+):
+    usuario = db.query(dbUsuario).filter(dbUsuario.id == id).first()
 
-    for usr in usuarios:
-        if usr["id"] == id:
-            usuarios.remove(usr)
-            return {
-                "mensaje": f"Usuario eliminado por {usuarioAuth}"
-            }
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
-    )
+    db.delete(usuario)
+    db.commit()
+
+    return {
+        "mensaje": f"Usuario eliminado por {usuarioAuth}"
+    }
